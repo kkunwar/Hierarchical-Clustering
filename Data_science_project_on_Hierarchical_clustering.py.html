@@ -1,0 +1,576 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
+#importing the required modules 
+import numpy as np
+import pandas as pd
+#import pandas_profiling as pp
+from matplotlib import pyplot as plt 
+import streamlit as st
+get_ipython().run_line_magic('matplotlib', 'inline')
+
+
+# In[2]:
+
+
+get_ipython().system('wget -O chemical composion of ceramics.csv http://archive.ics.uci.edu/ml/machine-learning-databases/00583/Chemical%20Composion%20of%20Ceramic.csv')
+
+
+# In[3]:
+
+
+st.title('Welcome to Data Science 1 Web Application')
+
+uploaded_file = st.file_uploader("Choose a file")
+if uploaded_file is not None:
+  df = pd.read_csv(uploaded_file)
+  st.write(df)
+
+
+st.header('\nClustering of chemical composition of Ceramics')
+st.subheader('Introduction:\n\n')
+
+
+st.write("""
+In general, clustering is a method/technique of dividing data points into distinct groups such that data points belonging to same group have more similarity to other data points in the same group that those in other groups. This method of identifying and grouping similar data points in a large dataset into one cluster is one of the most widely used technique in machine learning and data science. This unsupervised learning technique is frequently used in statistical data analysis and machine learning to design a model to predict the future assumptions. Moreover clustering is used in several fields like pattern recognition, image analysis and bioinformatics.
+
+Based on cluster model and the type of algorithms used, clustering can be categorised into five distinct types:\n
+1) Hierarchical clustering\n
+2) Partitioning based clustering (k-means clustering)\n
+3) Density based clustering \n
+4) Distribution based clustering \n
+5) Grid based clustering\n
+
+So let us start with an example dataset.\n 
+
+""")
+
+
+# In[4]:
+
+
+st.subheader('Description of dataset:\n\n')
+st.write("""
+There are multiple features in the given dataset. Each rows represents the ceramic sample from two different kilns
+used for the categorization and each columns represents the amount of chemical elements presented in the respective
+ceramic samples.
+The given dataset consists of 88 instances and 19 different attributes. The chosen dataset describes the chemical composition of celadon body and glaze from Longquan kiln and Jingdezhen kiln in China respectively. The chemical composition was examined by using Energy Dispersive X-ray Fluorescence (EDXRF) technology. The classification of ceramic samples based on their composition was performed using a statistical technique called Random Forest. The samples are categorized according to different cultural eras and kilns that were used to manufacture them. 44 samples were used to examine the chemical composition of celadon body and the same samples were examined again to determine the composition of glaze in those samples. 
+
+""")
+
+
+# In[ ]:
+
+
+
+
+
+# In[5]:
+
+
+#reading the dataset
+data = "Chemical"
+df1 = pd.read_csv(data)
+df1.head()
+
+
+st.write(df1.head(20))
+
+
+# In[6]:
+
+
+st.subheader('Goal of the project:\n\n')
+st.write("""
+The aim of the project is to classify celadon body and glaze based on their chemical composition. Furthermore, the analysis regarding similarities and differences between ceramic composition during celadon manufacture in Longquan kiln and Jingdezhen kiln is also performed. Hierarchical clustering method is applied to obtain the results of clustering analysis. 
+
+""")
+
+
+# In[7]:
+
+
+#since the dataset is labeled, i assigned two dummy variables for "Part" attribute as "Part_Body" = 1 and "Part_Glaze" = 0
+#this is very useful to determine the accuracy of a model later
+
+df1_part= pd.get_dummies(df1[["Part"]])
+
+#adding two columns at the end of dataset
+df = pd.concat([df1,df1_part],axis =1)
+
+#defining the target variables i.e. the Ceramic Names are assigned to either "Body" as value 1 or "Glaze" as valaue 0
+#x = df.iloc[:,(20)].values
+y = df.iloc[:,(19)].values
+df.head()
+
+
+# In[8]:
+
+
+#cleaning the dataset for the analysis
+# since the first two columns are non categorical, they need to be removed for the analysis
+df.pop("Ceramic Name")
+df.pop("Part")
+df.head()
+
+
+# In[9]:
+
+
+st.subheader('Implementation and results:\n\n')
+st.write("""
+Before starting with the clustering analysis, let's analyse the feature dataset by visualizing the distribution of datapoints of some features. 
+
+""")
+
+
+# In[10]:
+
+
+# Scatter plot to visualize the distribution of data points before normalizing the dataset 
+plot_before_normalization = plt.figure(figsize = (10,7))
+#ax= plt.scatter(df.iloc[:, 5], df.iloc[:, 7], marker='.')
+ax = plt.scatter(df["CaO"],df["Fe2O3"],marker ='.')
+plt.title("Distribution of data points as scatter plot before normalization")
+plt.xlabel("CaO")
+plt.ylabel("Fe2O3")
+
+
+#st.bar_chart(df["Fe2O3"])
+#st.bar_chart(df["CaO"])
+st.write(plot_before_normalization)
+
+
+# In[11]:
+
+
+st.write("""
+Let's look at the dendrogram to have a visualization of how it looks like before normalizing the dataset. We can compare this dendrogram with the dendrogram after normalizing the datasete in order to understand why is it so important to normalize the data before starting with any type of data analysis. Here we use "Euclidean distance" as a distance measure and ward linkage as the linkage criterion.
+
+""")
+
+
+# In[12]:
+
+
+#ploting the dendrogram of datapoints before normalizing the dataset
+from scipy.cluster import hierarchy
+dend_before_normalization = plt.figure(figsize=(10, 7))
+plt.title("Dendrogram before normalization")
+plt.xlabel("Name of Ceramic")
+plt.ylabel("Eucledian distance")
+#cluster_predict = cluster.fit_predict(df)
+dendrogram = hierarchy.dendrogram(hierarchy.linkage(df, method='ward'))
+#print("\nAccuracy of ward linkage before normalization: ",metrics.adjusted_rand_score(cluster_predict, y))
+
+
+
+st.write(dend_before_normalization)
+#st.write("\nAccuracy of ward linkage before normalization: ",metrics.adjusted_rand_score(cluster_predict, y))
+
+
+# In[13]:
+
+
+st.write("""
+Let's do one more step before starting with acutal clustering analysis. The feature dataset above needs to be cleaned. In this step the dataset with null values are either dropped or treated with the respective process. Removing the dataset with null values can result in loss of information. So, we need to be careful before doing this. In our case, the given dataset does not contain any null values. Let's creat our feature dataset by droping the first two columns representing "Ceramic Name" and “Part".
+\n
+Now we have our feature dataset. In the next step let's normalize the feature dataset so that all the variables are scaled same. Now the model is not biased towards the variable with higher values.
+
+""")
+
+
+# In[ ]:
+
+
+
+
+
+# In[14]:
+
+
+#normalising the data so that all the variables are scaled same. Now the model is not biased towards the variable with higher values
+from sklearn import preprocessing
+data_normalized = preprocessing.normalize(df)
+data_normalized = pd.DataFrame(data_normalized, columns=df.columns)
+data_normalized.head()
+
+
+st.write (data_normalized)
+
+
+# In[15]:
+
+
+st.write("""
+The above dataset is cleaned. Now the dataset is ready for our clustering analysis.
+Before starting with the actual clustering analysis, let's analyse the feature dataset by visualizing the distribution of datapoints of some features after normalization. 
+""")
+
+
+# In[ ]:
+
+
+
+
+
+# In[16]:
+
+
+# Scatter plot to visualize the distribution of data points after normalizing the dataset
+#now the dataset looks bit better
+plot_after_normalization= plt.figure(figsize = (10,7))
+#ax = plt.scatter(data_normalized.iloc[0:,5], data_normalized.iloc[0:,7], marker='.')
+ax = plt.scatter(data_normalized["CaO"],data_normalized["Fe2O3"],marker ='.')
+plt.title("Distribution of data points as scatter plot after normalization")
+plt.xlabel("CaO")
+plt.ylabel("Fe2O3")
+
+
+st.write(plot_after_normalization)
+
+
+# In[17]:
+
+
+st.write("""
+Now let's visualize the dendrogram after normalizing our feature dataset. This looks much better than the previous dendrogram produced before normalizing the dataset.
+""")
+
+
+# In[18]:
+
+
+#ploting the dendrogram of datapoints after normalizing the dataset
+dend_after_normalization = plt.figure(figsize=(10, 7))
+plt.title("Dendrogram after normalization")
+plt.xlabel("Name of Ceramic")
+plt.ylabel("Eucledian distance")
+dendrogram = hierarchy.dendrogram(hierarchy.linkage(data_normalized, method='ward'))
+
+
+st.write(dend_after_normalization)
+
+
+# In[19]:
+
+
+st.write("""
+Here the x-axis represents the ceramic samples and y-axis represents the Euclidean distance between those samples. Furthermore, we need to define a cutoff threshold in order to determine the optimal number of clusters.
+For that we look at the longest vertical line without any horizontal line passing through it. Then the number of vertical lines intersected by this newly drawn horizontal line are counted. These intersections is equal to the number of optimal clusters formed by the respective linkage criterion. 
+""")
+
+
+# In[20]:
+
+
+dend_with_cutoff = plt.figure(figsize=(10, 7))
+plt.title("Dendrogram after normalization with cutoff value")
+plt.xlabel("Name of Ceramic")
+plt.ylabel("Eucledian distance")
+dendrogram = hierarchy.dendrogram(hierarchy.linkage(data_normalized, method='ward'))
+
+# defining the threshold to cut the dendrogram
+plt.axhline(y=2, color='r', linestyle='--')
+plt.axhline(y=1.3, color='r', linestyle='--')
+
+
+st.write(dend_with_cutoff)
+
+
+# In[21]:
+
+
+st.write("""
+In the above dendrogram the blue line on the left is the longest vertical line with no horizontal line passing through it. A dashed line (threshold) is drawn at 2.0 in y-axis and the number of intersections between the new dashed line and the vertical blue line is counted. In our case the optimal number clusters is 2. This threshold basically determines the shortest distance needed to form a separate cluster. If we draw a line further below the number of intersections between threshold and vertical line increases resulting more number of clusters.   
+""")
+
+
+# In[22]:
+
+
+st.write("""
+Now, let's try clustering our dataset with different linkage criterion and different values of k.
+""")
+
+
+# In[23]:
+
+
+#creating selectbox in streamlit webapp in order to chose the number of clusters
+sel_col,disp_col = st.beta_columns(2)
+k = sel_col.selectbox(
+    'Choose the value of k',
+    options=[1, 2, 3,4,5],index=1
+    )
+Algorithm = sel_col.selectbox('Choose the algorithm you want to run',
+                              options = ['k-means Clustering','Hierarchical Clustering',
+                                        'BFR Clustering'],index = 1)
+
+
+# In[24]:
+
+
+st.subheader('Ward linkage clustering:\n\n')
+st.write("""
+In the figure below two features namely Fe2O3 and CaO which are responsible for the composition of ceramic are chosen and clustered using ward linkage method. The distance metric used for clustering is "Euclidean Distance". As we know that the chemical composition of celadon body and glaze should be different, it is expected that two separate clusters, each representing celadon body and celadon glaze respectively, would be obtained for the selected features. As expected Ward linkage is able to detect two clusters distinguishing the difference in chemical composition of celadon body and glaze. In addition, Rand score is calculated to estimate the accuracy of this linkage method. Rand index is a function that measures the similarity of two assignments, ground truth: labels_true and prediction: labels_pred, ignoring permutations. The Rand score for ward linkage is 0.95. This shows that ward linkage is successful for providing promishing clustering results for the selected features.  
+""")
+
+
+# In[48]:
+
+
+# for performing hiererchical clustering using scikitlearn package
+from sklearn.cluster import AgglomerativeClustering
+from sklearn import metrics
+
+#defining the number of clusters that we wanted. 2 is the optimal number of cluster in our case
+#clustering is performed using ward linkage method
+#k = 2
+cluster = AgglomerativeClustering(n_clusters=k, affinity='euclidean', linkage='ward')
+cluster_predict = cluster.fit_predict(data_normalized)
+print ("Cluser prediction: ",cluster_predict)
+print ("\nTraget variable: ",y )
+#print ("\nCluster labels: ",cluster.labels_)
+ward_linkage = plt.figure(figsize = (10,7))
+#ax = plt.scatter(data_normalized.iloc[:,5], data_normalized.iloc[:,7], c = cluster_predict,cmap='rainbow',marker='.')
+ax = plt.scatter(data_normalized["CaO"],data_normalized["Fe2O3"], c = cluster_predict, cmap = 'rainbow', marker ='.')
+
+
+#plt.scatter(data_normalized.iloc[:,1], data_normalized.iloc[:,2], c = cluster_predict,cmap='rainbow')
+#plt.scatter(data_normalized.iloc[:,3], data_normalized.iloc[:,4], c = cluster_predict,cmap='rainbow')
+
+
+# accuracy of clustering is calculated.
+# cluster evaluation is done using external validation index called Rand index
+print("Accuracy of ward linkage using rand score: ",metrics.adjusted_rand_score(cluster_predict, y))
+
+#trying other evaluation metrices for comparison
+print("Accuracy of ward linkage using mutual info score: ",metrics.adjusted_mutual_info_score(cluster_predict,y))
+print("Accuracy of ward linkage using v-measure score: ",metrics.v_measure_score(cluster_predict,y))
+
+plt.title("Hierarchical clustering using ward linkage method")
+plt.xlabel("CaO")
+plt.ylabel("Fe2O3")
+#plt.figtext(0.7,0.8,"Cluster1(Red)\nCluster2(Blue)",fontsize = 12)
+
+
+st.write(ward_linkage)
+st.write("Accuracy of ward linkage using rand score: ",metrics.adjusted_rand_score(cluster_predict, y))
+st.write("Accuracy of ward linkage using mutual info score: ",metrics.adjusted_mutual_info_score(cluster_predict,y))
+st.write("Accuracy of ward linkage using v-measure score: ",metrics.v_measure_score(cluster_predict,y))
+
+
+# In[26]:
+
+
+st.subheader('Complete linkage clustering:\n\n')
+st.write("""
+Next, Complete linkage clustering is performed for the same features. The default "Euclidean Distance" is used as distance metric. As we can see, this linkage criterion is not able to distinguish these features in separate clusters. Rand score is calculated to evaluate the accuracy of this clustering method. The value of rand score calculated is 0.0. This shows that complete linkage criterion is not optimal for the given dataset and therefore performs bad clustering. However, rand score of 0.0 does not necessarily mean that none of the features are assigned correctly into separate clusters. Normally ,random (uniform) label assignments have the rand score close to 0.0.     
+""")
+
+
+# In[27]:
+
+
+#clustering is performed using complete linkage method
+cluster = AgglomerativeClustering(n_clusters=k, affinity='euclidean', linkage='complete')
+cluster_predict = cluster.fit_predict(data_normalized)
+print ("Cluster prediction: ",cluster_predict)
+print ("\nTarget variable: ",y)
+#print ("Cluster labels: ",cluster.labels_)
+complete_linkage = plt.figure(figsize =(10,7))
+#ax = plt.scatter(data_normalized.iloc[:,5], data_normalized.iloc[:,7], c = cluster_predict, cmap='rainbow',marker = '.')
+ax = plt.scatter(data_normalized["CaO"],data_normalized["Fe2O3"], c = cluster_predict, cmap = 'rainbow', marker ='.')
+print("Accuracy of complete linkage using rand score: ",metrics.adjusted_rand_score(cluster_predict, y))
+print("Accuracy of complete linkage using mutual info score: ",metrics.adjusted_mutual_info_score(cluster_predict,y))
+print("Accuracy of complete linkage using v-measure score: ",metrics.v_measure_score(cluster_predict,y))
+plt.title("Hierarchical clustering using complete linkage method")
+plt.xlabel("CaO")
+plt.ylabel("Fe2O3")
+#plt.figtext(0.7,0.8,"Cluster1(Blue)",fontsize = 12)
+
+
+st.write(complete_linkage)
+st.write("Accuracy of complete linkage using rand score: ",metrics.adjusted_rand_score(cluster_predict, y))
+st.write("Accuracy of complete linkage using mutual info score: ",metrics.adjusted_mutual_info_score(cluster_predict,y))
+st.write("Accuracy of complete linkage using v-measure score: ",metrics.v_measure_score(cluster_predict,y))
+
+
+# In[28]:
+
+
+st.subheader('Single linkage clustering:\n\n')
+st.write("""
+Next, single linkage is chosen as the linkage criterion. The distance measure is again the default "Euclidean Distance". As above in the complete linkage clustering, single linkage method also fails to cluster the features into different clusters. The rand score calculated here is 0.0. This shows that single and complete linkage criterion are not optimal for the given dataset. 
+""")
+
+
+# In[29]:
+
+
+#clustering is performed using single linkage method
+cluster = AgglomerativeClustering(n_clusters=k, affinity='euclidean', linkage='single')
+cluster_predict = cluster.fit_predict(data_normalized)
+print ("Cluster prediction: ",cluster_predict)
+print ("\nTarget variable: ",y)
+single_linkage = plt.figure(figsize=(10,7))
+#ax = plt.scatter(data_normalized.iloc[:,5], data_normalized.iloc[:,7], c = cluster_predict, cmap='rainbow',marker = '.')
+ax = plt.scatter(data_normalized["CaO"],data_normalized["Fe2O3"], c = cluster_predict, cmap = 'rainbow', marker ='.')
+print("Accuracy of single linkage using rand score: ",metrics.adjusted_rand_score(cluster_predict, y))
+print("Accuracy of single linkage using mutual info score: ",metrics.adjusted_mutual_info_score(cluster_predict,y))
+print("Accuracy of single linkage using v-measure score: ",metrics.v_measure_score(cluster_predict,y))
+plt.title("Hierarchical clustering using single linkage method")
+plt.xlabel("CaO")
+plt.ylabel("Fe2O3")
+#plt.figtext(0.7,0.8,"Cluster1(Blue)",fontsize = 12)
+
+
+
+st.write(single_linkage)
+st.write("Accuracy of single linkage using rand score: ",metrics.adjusted_rand_score(cluster_predict, y))
+st.write("Accuracy of single linkage using mutual info score: ",metrics.adjusted_mutual_info_score(cluster_predict,y))
+st.write("Accuracy of single linkage using v-measure score: ",metrics.v_measure_score(cluster_predict,y))
+
+
+# In[30]:
+
+
+st.subheader('Average linkage clustering:\n\n')
+st.write("""
+Finally, average linkage clustering is performed for the same selected features. As before default "Euclidean distance" is chosen as distance metric. In contrast to complete and single linkage clustering, average and ward linkage clustering produce much favourable resuts. They both have the Rand score of 0.95 and are also able to cluster two different features into separate clusters.  
+""")
+
+
+# In[31]:
+
+
+#clustering is performed using average linkage method
+cluster = AgglomerativeClustering(n_clusters=k, affinity='euclidean', linkage='average')
+cluster_predict = cluster.fit_predict(data_normalized)
+print ("Cluster prediction: ",cluster_predict)
+print ("\nTarget variable: ",y)
+#print (cluster.labels_)
+average_linkage = plt.figure(figsize=(10,7))
+#ax = plt.scatter(data_normalized.iloc[:,5], data_normalized.iloc[:,7], c = cluster_predict, cmap='rainbow',marker = '.')
+ax = plt.scatter(data_normalized["CaO"],data_normalized["Fe2O3"], c = cluster_predict, cmap = 'rainbow', marker ='.')
+print ("\nAccuracy of average linkage using rand score: ",metrics.adjusted_rand_score(cluster_predict,y))
+print("Accuracy of average linkage using mutual info score: ",metrics.adjusted_mutual_info_score(cluster_predict,y))
+print("Accuracy of average linkage using v-measure score: ",metrics.v_measure_score(cluster_predict,y))
+plt.title("Hierarchical clustering using average linkage method")
+plt.xlabel("CaO")
+plt.ylabel("Fe2O3")
+#plt.figtext(0.7,0.8,"Cluster1(Red)\nCluster2(Blue)",fontsize = 12)
+
+
+
+st.write(average_linkage)
+st.write("Accuracy of average linkage using rand score: ",metrics.adjusted_rand_score(cluster_predict, y))
+st.write("Accuracy of average linkage using mutual info score: ",metrics.adjusted_mutual_info_score(cluster_predict,y))
+st.write("Accuracy of average linkage using v-measure score: ",metrics.v_measure_score(cluster_predict,y))
+
+
+# In[32]:
+
+
+st.subheader('Analysis of the clusters:\n\n')
+st.write("""
+For the chosen value of k = 2, hierarchical clustering successfully clusters celadon body (Red cluster) and glaze (blue cluster) into two distinct cluters. From the above figure we can conclude that celadon body is composed of more Fe2O3 and less Cao. Likewise, looking at the chemical composition of celadon glaze, we can clearly see that celadon glaze contains more CaO and less Fe2O3. This shows that ward and average linkage method have precicted the clusters with high accuracy. This means, ward and average linkage criterions have produced optimal clustering results for the given dataset.    
+""")
+
+
+# In[33]:
+
+
+st.subheader('Analysis of celadon body:\n\n')
+st.write("""
+For this analysis the dataset was filtered again droping all the rows with category "Glaze". This analysis is performed in order to evaluate whether there are any differences in the chemical composition of celadon body manufactured in two different kilns: Longquan kiln and Jingdezhen kiln. There are two ditinct clusters formed where it can be seen that CaO contents of celadon body in Jingdezhen are higher than those in Longquan, whereas the Fe2O3 contents of celadon body in Longquan are higher than those of Jingdezehn. This indicates that the chemical composition of bodies is also different in those two separate kilns.       
+""")
+
+
+# In[34]:
+
+
+# filtering only the columns with category "Body"
+df2 = data_normalized.iloc[0:43, 0:17]
+df2.head()
+
+
+# In[35]:
+
+
+#Clustering of the dataset with only Celadon body 
+cluster = AgglomerativeClustering(n_clusters=k, affinity='euclidean', linkage='ward')
+cluster_predict = cluster.fit_predict(df2)
+ward_linkage_body = plt.figure(figsize=(10,7))
+ax = plt.scatter(df2['CaO'], df2['Fe2O3'],c=cluster_predict,cmap='rainbow',marker='.')
+plt.title("Hierarchical clustering of celadon body using ward linkage method and Euclidean distance")
+plt.xlabel("CaO")
+plt.ylabel("Fe2O3")
+
+
+st.write (ward_linkage_body)
+
+
+# In[36]:
+
+
+st.subheader('Analysis of celadon glaze:\n\n')
+st.write("""
+For this analysis the dataset was filtered droping all the rows with category "Body". Two separarate clusters are formed and it is observed that CaO contents of celadon glaze in Longquan are higer than those in Jingdezhen. In case of Fe2O3 contents, no any significant differences are observed.
+""")
+
+
+# In[37]:
+
+
+#filtering only columns with category "Glaze"
+df3 =data_normalized.iloc[44:, 0:17]
+df3.head()
+
+
+# In[38]:
+
+
+#Clustering of the dataset with only Celadon glaze
+cluster = AgglomerativeClustering(n_clusters=k, affinity='euclidean', linkage='ward')
+cluster_predict = cluster.fit_predict(df3)
+ward_linkage_glaze = plt.figure(figsize=(10,7))
+ax = plt.scatter(df3['CaO'], df3['Fe2O3'],c=cluster_predict,cmap='rainbow',marker='.')
+plt.title("Hierarchical clustering of celadon glaze using ward linkage method and Euclidean distance")
+plt.xlabel("CaO")
+plt.ylabel("Fe2O3")
+
+
+st.write(ward_linkage_glaze)
+
+
+# In[39]:
+
+
+st.subheader('Conclusion:\n\n')
+st.write("""
+Hierarchical clustering analysis was performed on the dataset containing 44 different samples with 17 different chemical compositions. Two important features were chosen for the analysis. The outcome of whole analysis can be evaluated and verified by using other features as well. As stated on the begining of the project, the main objective of the project was to evaluate given samples and cluster them with various strategies accordingly. Hierarchical clustering with "ward-" and "average-" linkage method are successful in producing the promishing results with higer accuracy rate. Clustering with other linkage criterion ("single-" and "complete-" linkage) is not optimal for the given dataset. In general, Agglomerative clustering has a "rich get richer" behaviour which leads to uneven cluster sizes and therefore generate less accurate results. This is also the case for "single-"and "complete-" linkage method during our analysis. However, "single-" and "complete-" linkage criteria can be very efficient to compute hierarchical clustering for larger datasets. During any data science analysis, it is very useful and recommended to use the evaluation measures to get an idea on how efficiently the implemented algorithm is performing. Varying the distance metric can sometimes lead to more accurate results. But it is necessary to understand the dataset in prior to applying them.        
+""")
+
+
+# In[40]:
+
+
+#print(df3_normalized[['CaO']].mean())
+#print (df3_normalized[['Fe2O3']].mean())
+#print (df2_normalized[['CaO']].mean())
+#print (df2_normalized[['Fe2O3']].mean())
+
+
+# In[41]:
+
+
+#https://github.com/ChristianFJung/NotebookToWebApp
+get_ipython().system('jupyter nbconvert   --to script Data_science_project_on_Hierarchical_clustering.ipynb')
+get_ipython().system("awk '!/ipython/' Data_science_project_on_Hierarchical_clustering.py >  temp.py && mv temp.py app.py && rm Data_science_project_on_Hierarchical_clustering.py")
+get_ipython().system('streamlit run app.py')
+
