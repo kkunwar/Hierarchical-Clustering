@@ -1,0 +1,100 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
+#importing the required modules 
+import numpy as np
+import pandas as pd
+#import pandas_profiling as pp
+from matplotlib import pyplot as plt 
+get_ipython().run_line_magic('matplotlib', 'inline')
+import streamlit as st
+
+
+# In[24]:
+
+
+df = pd.read_csv("/Users/kirankunwar/Desktop/BFR_input.csv")
+df.head()
+df1 = df.head(500)
+
+
+# In[25]:
+
+
+df1
+
+
+# In[26]:
+
+
+#normalising the data so that all the variables are scaled same. Now the model is not biased towards the variable with higher values
+from sklearn import preprocessing
+data_normalized = preprocessing.normalize(df1)
+data_normalized = pd.DataFrame(data_normalized, columns=df1.columns)
+data_normalized.head()
+
+
+# In[38]:
+
+
+from scipy.cluster import hierarchy
+from sklearn.cluster import AgglomerativeClustering
+from sklearn import metrics
+fig3 = plt.figure(figsize=(10, 7))
+plt.title("Dendrogram after normalization")
+plt.xlabel("Name of x-axis")
+plt.ylabel("Eucledian distance")
+dendrogram = hierarchy.dendrogram(hierarchy.linkage(data_normalized, method='complete'))
+st.write(fig3)
+
+
+# In[41]:
+
+
+#performing hiererchical clustering using scikitlearn package
+from sklearn.cluster import AgglomerativeClustering
+from sklearn import metrics
+
+#defining the number of clusters that we wanted. 2 is the optimal number of cluster in our case
+#clustering is performed using ward linkage method
+k = 2
+cluster = AgglomerativeClustering(n_clusters=k, affinity='euclidean', linkage='ward')
+cluster_predict = cluster.fit_predict(data_normalized)
+#print ("Cluser prediction: ",cluster_predict)
+#print ("\nTraget variable: ",y )
+#print ("\nCluster labels: ",cluster.labels_)
+fig4 = plt.figure(figsize = (10,7))
+ax = plt.scatter(data_normalized.iloc[:,5], data_normalized.iloc[:,7], c = cluster_predict, cmap='rainbow')
+
+# accuracy of clustering is calculated.
+# cluster evaluation is done using external validation index called Rand index
+#print("\nAccuracy of ward linkage: ",metrics.adjusted_rand_score(cluster_predict,y))
+plt.title("Hierarchical clustering using ward linkage method")
+#fig4.update()
+
+
+# In[42]:
+
+
+cluster = AgglomerativeClustering(n_clusters=k, affinity='euclidean', linkage='complete')
+cluster_predict = cluster.fit_predict(data_normalized)
+#print ("Cluser prediction: ",cluster_predict)
+#print ("\nTraget variable: ",y )
+#print ("\nCluster labels: ",cluster.labels_)
+fig4 = plt.figure(figsize = (10,7))
+ax = plt.scatter(data_normalized.iloc[:,5], data_normalized.iloc[:,7], c = cluster_predict, cmap='rainbow')
+
+# accuracy of clustering is calculated.
+# cluster evaluation is done using external validation index called Rand index
+#print("\nAccuracy of ward linkage: ",metrics.adjusted_rand_score(cluster_predict,y))
+plt.title("Hierarchical clustering using complete linkage method")
+
+
+# In[ ]:
+
+
+
+
